@@ -1,0 +1,61 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>GDP with HighStock</title>
+
+
+	</head>
+	<body>
+        <div id="container" style="height: 400px; min-width: 310px"></div>
+        <script src="jquery.min.js"></script>
+        <script src="underscore-min.js"></script>
+        <script src="highstock.js"></script>
+        <script src="timeseries.js"></script>
+        <script type="text/javascript">
+            $('#container').highcharts('StockChart', {
+
+
+            rangeSelector : {
+                buttons: [
+                    {
+                        type: 'year',
+                        count: 5,
+                        text: '5y'
+                    },
+                    {
+                        type: 'year',
+                        count: 10,
+                        text: '10y'
+                    },
+                    {
+                        type: 'all',
+                        text: 'All'
+                    }
+                ],
+                selected : 2,
+                inputEnabled: $('#container').width() > 480
+            },
+
+            title : {
+                text : 'Real GDP'
+            },
+
+            series : [{
+                name : 'GDP',
+                data : _.map(seriesGdp.observations, FRED.observationAsPoint),
+                tooltip: {
+                    valueDecimals: 2
+                }
+            }],
+
+            yAxis : {
+                opposite: false,
+                title: {
+                    text: 'Billions of Chained 2009 Dollars'
+                }
+            }
+        });
+        </script>
+    </body>
+</html>
