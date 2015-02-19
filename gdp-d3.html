@@ -27,26 +27,22 @@
       stroke: steelblue;
       stroke-width: 1.5px;
     }
+
+    .recession rect {
+      fill: #EEEEEE;
+
+    }
   </style>
   <body>
     <div id="timeseries"></div>
     <script src="d3.v3.min.js"></script>
+    <script src="seq.js"></script>
     <script src="timeseries.js"></script>
+    <script src="FRED-data.js"></script>
     <script>
       var margin = {top: 20, right: 20, bottom: 30, left: 70},
           width = 960 - margin.left - margin.right,
           height = 500 - margin.top - margin.bottom;
-
-      var parseDate = d3.time.format("%Y-%m-%d").parse;
-
-      /**
-       * Parse the date attribute of a FRED observation and coerce the value attribute to numeric.
-       *
-       * @return a new object with the attributes "date" and "value".
-       */
-      function parseObservation(observation) {
-        return { date: parseDate(observation.date), value: +observation.value };
-      }
 
       // time scale for values on the X axis
       var x = d3.time.scale()
@@ -66,8 +62,8 @@
 
       // represent time series observations with a line
       var line = d3.svg.line()
-        .x(function(d) { return x(d.date); })
-        .y(function(d) { return y(d.value); });
+        .x(function(d) { return x(FRED.observationDate(d)); })
+        .y(function(d) { return y(FRED.observationValue(d)); })
 
       // append SVG as a child of the #timeseries container
       var svg = d3.select("#timeseries").append("svg")
@@ -77,16 +73,36 @@
           .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
       // transform FRED date and value attribs of each observation to Date and numeric equivalents
-      var data = seriesGdp.observations.map(parseObservation);
+      var data = seriesGdp.observations.map(FRED.parseObservation);
+      var recessionData = seriesRecession.observations.map(FRED.parseObservation);
 
       // x bounds are min/max of the dates in the series
-      x.domain(d3.extent(data, function(d) { return d.date }));
+      x.domain(d3.extent(data, FRED.observationDate));
 
       // y bounds slightly bigger than the min/max of the series values
-      var yDomain = d3.extent(data, function(d) { return d.value });
+      var yDomain = d3.extent(data, FRED.observationValue);
       yDomain[0] = yDomain[0] * 0.9;
       yDomain[1] = yDomain[1] * 1.1;
       y.domain(yDomain);
+
+      // extract recession periods that overlap data series
+      var overlapsSeries = function(observation) {
+        var domain = x.domain()
+        return (observation.date >= domain[0] && observation.date <= domain[1]);
+      };
+      var recessionPeriods = FRED.recessionPeriods(recessionData.filter(overlapsSeries));
+
+      // recession shading should appear behind all other elements so they must be added first
+      var recessionBar = svg.append("g")
+        .attr("class", "recession")
+        .selectAll("rect")
+        .data(recessionPeriods)
+          .enter().append("rect");
+
+      recessionBar.attr("transform", function(d, i) { return "translate(" + x(d[0]) + ", 0)"; })
+            .attr("width", function(d, i) { return (x(d[1]) - x(d[0])); })
+            .attr("height", height);
+
 
       // add the X axis
       svg.append("g")
@@ -112,18 +128,6 @@
         .datum(data)
         .attr("class", "line")
         .attr("d", line);
-
-      //
-      // recession shading
-      //
-
-      // 1. transform recession observations
-      var recessionData = seriesRecession.observations.map(parseObservation);
-
-      // 2. transform series into pairs that define start and end of recession periods
-
-
-      // 3. append rect for each recession period
 
     </script>
   </body>
